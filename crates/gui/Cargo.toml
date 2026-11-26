@@ -1,0 +1,27 @@
+[package]
+name = "private-archive-gui"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+
+[features]
+test-fixtures = ["dep:serde_json", "archive-infra/test-fixtures"]
+
+[dependencies]
+archive-config.workspace = true
+archive-domain.workspace = true
+archive-index.workspace = true
+archive-infra.workspace = true
+archive-sync.workspace = true
+clap.workspace = true
+tokio.workspace = true
+time = { version = "0.3", features = ["formatting"] }
+slint = { version = "=1.19.0", default-features = false, features = ["std", "backend-winit-x11", "renderer-software", "compat-1-18"] }
+serde_json = { version = "1", optional = true }
+
+[build-dependencies]
+slint-build = { version = "=1.19.0", default-features = false, features = ["compat-1-18", "renderer-software"] }
+
+[dev-dependencies]
+tempfile.workspace = true
+

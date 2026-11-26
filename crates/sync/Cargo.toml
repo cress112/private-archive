@@ -1,0 +1,17 @@
+[package]
+name = "sync"
+edition = "2024"
+rust-version = "1.99"
+
+[lib]
+name = "archive_sync"
+
+[dependencies]
+archive-domain.workspace = true
+archive-index.workspace = true
+ignore.workspace = true
+tokio.workspace = true
+serde.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

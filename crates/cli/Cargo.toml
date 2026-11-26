@@ -1,0 +1,24 @@
+[package]
+name = "private-archive"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+
+[features]
+test-fixtures = ["archive-infra/test-fixtures"]
+
+[dependencies]
+archive-infra.workspace = true
+archive-index.workspace = true
+tokio = { workspace = true, features = ["signal", "net"] }
+libc.workspace = true
+archive-config.workspace = true
+archive-domain.workspace = true
+archive-sync.workspace = true
+clap.workspace = true
+serde.workspace = true
+serde_json = "1"
+time = { version = "0.3", features = ["formatting"] }
+
+[dev-dependencies]
+tempfile.workspace = true

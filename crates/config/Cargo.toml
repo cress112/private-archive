@@ -1,0 +1,13 @@
+[package]
+name = "archive-config"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+archive-domain.workspace = true
+serde.workspace = true
+toml.workspace = true
+thiserror.workspace = true
+tempfile.workspace = true
+toml_edit = "0.25"

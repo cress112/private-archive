@@ -1,0 +1,36 @@
+[package]
+name = "archive-infra"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+
+[features]
+test-fixtures = []
+
+[dependencies]
+archive-domain.workspace = true
+archive-sync.workspace = true
+archive-index.workspace = true
+tempfile.workspace = true
+tokio.workspace = true
+crc.workspace = true
+sha1.workspace = true
+sha2.workspace = true
+libc.workspace = true
+serde.workspace = true
+serde_json = "1"
+rusqlite = { version = "=0.43.0", default-features = false, features = ["bundled", "backup", "hooks"] }
+aws-config = { version = "=1.13.2", default-features = false, features = ["default-https-client", "rt-tokio"] }
+aws-sdk-s3 = { version = "=1.159.0", default-features = false, features = ["default-https-client", "rt-tokio", "http-1x"] }
+aws-smithy-types = "1"
+aws-smithy-runtime-api = "1"
+aws-types = "1"
+bytes = "1"
+http-body = "1"
+base64 = "0.22"
+time = { version = "0.3", features = ["formatting", "parsing"] }
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["net", "test-util"] }
+aws-credential-types = "1"
+futures-util = { version = "0.3", default-features = false, features = ["std"] }

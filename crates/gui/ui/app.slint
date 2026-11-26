@@ -1,0 +1,170 @@
+import { ScrollView, ListView } from "std-widgets.slint";
+import { Button, LineEdit, ComboBox } from "controls.slint";
+export struct FileRow { name: string, uri: string, kind: string, namespace: string, loaded: bool }
+export struct ColumnData { title: string, scope: string, rows: [FileRow], selected: int, count: string, width: length, scroll-y: length }
+export struct DetailRow { label: string, value: string }
+export struct SettingData { key: string, value: string, effective: string, origin: string, explicit: bool, dirty: bool }
+export struct SortData { choice: int }
+export component AppWindow inherits Window {
+    title: "Private Archive"; preferred-width: 1180px; preferred-height: 760px; min-width: 800px; min-height: 520px; background: #f6f7f9;
+    in property <string> index-label;
+    in property <string> status: "読み込み中…";
+    in property <string> error-message;
+    in property <string> diagnostics;
+    in property <[ColumnData]> columns;
+    out property <length> row-height: 24px;
+    out property <length> columns-x: columns-scroll.content-x;
+    out property <length> columns-visible-width: columns-scroll.visible-width;
+    out property <length> columns-content-width: columns-scroll.content-width;
+    in property <[DetailRow]> details;
+    in property <bool> loading: true;
+    in property <bool> reconciling;
+    in property <bool> closing;
+    in property <bool> selected-file;
+    in-out property <string> depth;
+    in property <bool> settings-open;
+    in property <bool> settings-exists;
+    in property <string> config-label;
+    in property <[SettingData]> settings;
+    in property <bool> sort-open;
+    in property <[SortData]> sorts;
+    callback select-row(int,int); callback select-top(); callback reload(); callback reconcile(); callback cancel-operation();
+    callback open-settings(); callback create-settings(); callback save-settings(); callback close-settings();
+    callback edit-setting(int,string); callback reset-setting(int);
+    callback open-sort(); callback edit-sort(int,int); callback move-sort(int,int); callback remove-sort(int); callback add-sort(); callback apply-sort(); callback close-sort();
+    VerticalLayout {
+        spacing: 0px;
+        Rectangle { height: 104px; background: #ffffff;
+            VerticalLayout { padding: 16px; spacing: 10px;
+                HorizontalLayout {
+                    Text { text: "Private Archive"; color: #172033; font-size: 20px; font-weight: 600; }
+                    Rectangle { horizontal-stretch: 1; }
+                    Button { width: 132px; height: 32px; text: "トップ"; enabled: !root.closing && !root.settings-open && !root.sort-open; clicked => { root.select-top(); } }
+                    Button { width: 132px; height: 32px; text: "ローカル再読込"; enabled: !root.closing && !root.settings-open && !root.sort-open; clicked => { root.reload(); } }
+                    Button { width: 132px; height: 32px; text: "並べ替え"; enabled: !root.closing && !root.settings-open && !root.sort-open; clicked => { root.open-sort(); } }
+                    Button { width: 132px; height: 32px; text: "設定"; enabled: !root.closing && !root.settings-open && !root.sort-open; clicked => { root.open-settings(); } }
+                }
+                HorizontalLayout {
+                    Text { text: root.index-label; color: #667085; font-size: 11px; overflow: elide; horizontal-stretch: 1; vertical-alignment: center; }
+                    Text { text: "再帰の深さ"; color: #667085; vertical-alignment: center; }
+                    LineEdit { height: 32px; text <=> root.depth; width: 85px; placeholder-text: "無制限"; enabled: !root.selected-file && !root.reconciling && !root.closing; }
+                    Button { width: 132px; height: 32px; text: "再照合"; enabled: !root.reconciling && !root.loading && !root.closing; clicked => { root.reconcile(); } }
+                    Button { width: 132px; height: 32px; text: "取消"; enabled: root.reconciling && !root.closing; clicked => { root.cancel-operation(); } }
+                }
+            }
+        }
+        HorizontalLayout { spacing: 0px;
+            columns-scroll := ScrollView { horizontal-stretch: 1;
+                vertical-scrollbar-policy: always-off;
+                content-height: self.visible-height;
+                HorizontalLayout { spacing: 0px; height: columns-scroll.visible-height - 14px;
+                    for column[column-index] in root.columns: Rectangle { width: column.width; background: #ffffff; border-color: #e1e5eb; border-width: 1px;
+                        VerticalLayout { spacing: 0px; padding-right: 8px;
+                            Rectangle { height: 36px;
+                                Text { x: 12px; width: parent.width - 24px; height: parent.height; text: column.title; color: #667085; font-size: 12px; vertical-alignment: center; overflow: elide; }
+                            }
+                            ListView {
+                                horizontal-scrollbar-policy: always-off;
+                                content-width: self.visible-width;
+                                content-y <=> column.scroll-y;
+                                scrolled => { column.scroll-y = self.content-y; }
+                                for row[row-index] in column.rows: Rectangle { height: root.row-height; background: row-index == column.selected ? #e4edff : area.has-hover ? #f1f5fa : #ffffff;
+                                    Text { x: 12px; width: 18px; height: parent.height; text: row.kind == "object" ? "·" : "▸"; color: #7387a0; vertical-alignment: center; }
+                                    Text { x: 32px; width: parent.width - 44px; height: parent.height; text: row.name; color: row.loaded ? #27364b : #98a2b3; font-size: 13px; vertical-alignment: center; overflow: elide; }
+                                    area := TouchArea { enabled: row.loaded && !root.closing && !root.settings-open && !root.sort-open; clicked => { root.select-row(column-index,row-index); } }
+                                }
+                            }
+                            Rectangle { height: 26px; Text { x: 12px; height: parent.height; text: column.count; color: #98a2b3; font-size: 10px; vertical-alignment: center; } }
+                        }
+                        Rectangle { x: parent.width - 8px; width: 8px; height: parent.height;
+                            background: resize-area.pressed ? #dce6fa : resize-area.has-hover ? #edf2fb : #f6f7f9;
+                            Rectangle { x: parent.width - 1px; width: 1px; height: parent.height; background: #e1e5eb; }
+                            resize-area := TouchArea {
+                                enabled: !root.closing && !root.settings-open && !root.sort-open;
+                                mouse-cursor: ew-resize;
+                                private property <length> start-x;
+                                private property <length> start-width;
+                                pointer-event(event) => {
+                                    if event.button == PointerEventButton.left && event.kind == PointerEventKind.down {
+                                        self.start-x = self.absolute-position.x + self.mouse-x;
+                                        self.start-width = column.width;
+                                    }
+                                }
+                                moved => {
+                                    if self.pressed {
+                                        column.width = clamp(self.start-width + self.absolute-position.x + self.mouse-x - self.start-x, 160px, 720px);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            Rectangle { width: 290px; background: #f8f9fb;
+                VerticalLayout { padding: 14px; spacing: 8px;
+                    Text { text: "詳細"; color: #667085; font-size: 12px; height: 26px; }
+                    ScrollView { VerticalLayout { spacing: 12px;
+                        for detail in root.details: VerticalLayout { spacing: 4px;
+                            Text { text: detail.label; color: #667085; font-size: 11px; }
+                            Text { text: detail.value; color: #27364b; font-size: 12px; wrap: word-wrap; }
+                        }
+                        Rectangle { vertical-stretch: 1; }
+                    } }
+                }
+            }
+        }
+        if root.error-message != "": Rectangle { height: 64px; background: #fff0ee;
+            Text { x: 16px; y: 8px; width: parent.width - 32px; height: 48px; text: root.error-message; color: #a32927; wrap: word-wrap; overflow: elide; }
+        }
+        if root.diagnostics != "": Rectangle { height: 72px; background: #f1f3f6;
+            ScrollView { x: 12px; y: 6px; width: parent.width - 24px; height: parent.height - 12px;
+                Text { text: root.diagnostics; color: #667085; font-size: 10px; wrap: word-wrap; }
+            }
+        }
+        Rectangle { height: 34px; background: #ffffff;
+            Text { x: 16px; width: parent.width - 32px; height: parent.height; text: root.status; color: #667085; font-size: 11px; vertical-alignment: center; overflow: elide; }
+        }
+    }
+    if root.sort-open: Rectangle { x: 80px; y: 100px; width: root.width - 160px; height: 340px; background: #ffffff; border-width: 1px; border-color: #bac5d6;
+        VerticalLayout { padding: 22px; spacing: 12px;
+            Text { text: "並べ替え — 上の条件を優先"; color: #27364b; font-size: 17px; }
+            for term[index] in root.sorts: HorizontalLayout {
+                ComboBox { height: 32px; min-width: 160px; model: ["名前 昇順", "名前 降順", "サイズ 昇順", "サイズ 降順", "URI 昇順", "URI 降順"]; current-index: term.choice; selected(value) => { root.edit-sort(index,self.current-index); } }
+                Button { width: 132px; height: 32px; text: "↑"; enabled: index > 0; clicked => { root.move-sort(index,-1); } }
+                Button { width: 132px; height: 32px; text: "↓"; enabled: index + 1 < root.sorts.length; clicked => { root.move-sort(index,1); } }
+                Button { width: 132px; height: 32px; text: "削除"; enabled: root.sorts.length > 1; clicked => { root.remove-sort(index); } }
+            }
+            Button { width: 132px; height: 32px; text: "条件を追加"; enabled: root.sorts.length < 3; clicked => { root.add-sort(); } }
+            Rectangle { vertical-stretch: 1; }
+            HorizontalLayout { Rectangle { horizontal-stretch: 1; }
+                Button { width: 132px; height: 32px; text: "キャンセル"; clicked => { root.close-sort(); } }
+                Button { width: 132px; height: 32px; text: "適用"; clicked => { root.apply-sort(); } }
+            }
+        }
+    }
+    if root.settings-open: Rectangle { x: 36px; y: 26px; width: root.width - 72px; height: root.height - 52px; background: #ffffff; border-width: 1px; border-color: #bac5d6;
+        VerticalLayout { padding: 22px; spacing: 12px;
+            Text { text: "共有設定"; color: #27364b; font-size: 19px; }
+            Text { text: root.config-label; color: #667085; font-size: 11px; overflow: elide; }
+            ListView {
+                for setting[index] in root.settings: Rectangle { height: 99px;
+                    VerticalLayout { spacing: 5px; padding-bottom: 14px;
+                        HorizontalLayout {
+                            Text { text: setting.key; color: #27364b; horizontal-stretch: 1; vertical-alignment: center; }
+                            Button { width: 132px; height: 32px; text: "既定値へ戻す"; enabled: root.settings-exists; clicked => { root.reset-setting(index); } }
+                        }
+                        LineEdit { height: 32px; text: setting.value; placeholder-text: "既定値を使用"; enabled: root.settings-exists; edited => { root.edit-setting(index,self.text); } }
+                        Text { text: "現在の有効値: " + setting.effective + "  (" + setting.origin + ")"; color: #667085; font-size: 10px; overflow: elide; }
+                    }
+                }
+            }
+            if root.error-message != "": Text { text: root.error-message; color: #a32927; wrap: word-wrap; font-size: 12px; min-height: 36px; }
+            HorizontalLayout {
+                Button { width: 132px; height: 32px; text: "設定作成"; enabled: !root.settings-exists; clicked => { root.create-settings(); } }
+                Rectangle { horizontal-stretch: 1; }
+                Button { width: 132px; height: 32px; text: "キャンセル"; clicked => { root.close-settings(); } }
+                Button { width: 132px; height: 32px; text: "保存"; enabled: root.settings-exists; clicked => { root.save-settings(); } }
+            }
+        }
+    }
+}

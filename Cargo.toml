@@ -1,0 +1,33 @@
+[workspace]
+resolver = "3"
+members = ["crates/domain", "crates/config", "crates/index", "crates/sync", "crates/infra", "crates/cli", "crates/gui"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.99"
+
+[workspace.dependencies]
+archive-infra = { path = "crates/infra" }
+archive-domain = { path = "crates/domain" }
+archive-config = { path = "crates/config" }
+archive-sync = { package = "sync", path = "crates/sync" }
+archive-index = { package = "index", path = "crates/index" }
+clap = { version = "4.6", features = ["derive"] }
+serde = { version = "1", features = ["derive"] }
+toml = "1.2"
+thiserror = "2"
+ignore = "0.4"
+tempfile = "3"
+tokio = { version = "1", features = ["fs", "io-util", "macros", "rt-multi-thread", "sync", "time"] }
+crc = "3.4"
+sha1 = "0.10"
+sha2 = "0.10"
+libc = "0.2"
+
+# The generated S3 crate is large; keep development builds within local disk/RAM.
+[profile.dev.package.aws-sdk-s3]
+debug = 0
+
+[profile.test.package.aws-sdk-s3]
+debug = 0

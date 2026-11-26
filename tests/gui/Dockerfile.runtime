@@ -1,0 +1,6 @@
+FROM debian:bookworm-slim@sha256:734a72b3d6142a71993b4bc580ca01d8ca687f77a2c422d96a961d3376b179bc
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ca-certificates python3 xvfb xauth x11-utils libfontconfig1 libxkbcommon0 libxkbcommon-x11-0 libx11-6 libxi6 libxcursor1 libxrandr2 libxinerama1 libxrender1 libxcb-shape0 libxcb-xfixes0 fonts-dejavu-core fonts-noto-cjk \
+    && rm -rf /var/lib/apt/lists/*
+ENV AWS_EC2_METADATA_DISABLED=true XDG_RUNTIME_DIR=/tmp/archive-runtime
+WORKDIR /work
